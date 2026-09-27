@@ -1,177 +1,199 @@
 # Dynamic Pricing with Multi-Armed Bandits
 
-Proyek ini mensimulasikan **dynamic pricing** untuk satu produk menggunakan beberapa algoritma **Multi-Armed Bandit** yang diimplementasikan dari nol.  
-Fokus utama proyek adalah memahami **bagaimana agent belajar**, **bagaimana asumsi environment memengaruhi performa**, dan **mengapa algoritma tertentu unggul pada kondisi tertentu**.
+This project simulates **dynamic pricing** for a single product using several **Multi-Armed Bandit (MAB)** algorithms implemented from scratch.
+
+The main focus of the project is to understand **how agents learn**, **how environmental assumptions affect performance**, and **why certain algorithms perform better under specific conditions**.
 
 ---
 
-## Persiapan Lingkungan (Environment)
+## Environment Setup
 
-Simulasi pasar terdiri dari:
-- Satu produk
-- Beberapa pilihan harga (arms)
-- Pelanggan dengan perilaku probabilistik
+The simulated market consists of:
 
-### Data yang disimpan
-- Daftar harga yang dapat dipilih agent
-- Probabilitas pelanggan membeli pada harga tertentu
+* A single product
+* Multiple pricing options (arms)
+* Customers with probabilistic purchasing behavior
 
-### Mekanisme `pull`
-Setiap kali agent memilih harga:
-- Pelanggan bisa membeli (purchase)
-- Atau tidak membeli  
-Peristiwa ini bersifat stokastik (acak)
+### Stored Data
+
+* List of available prices that can be selected by the agent
+* Customer purchase probabilities associated with each price
+
+### `pull` Mechanism
+
+Each time the agent selects a price:
+
+* The customer either makes a purchase
+* Or does not make a purchase
+
+The outcome is stochastic (random).
 
 ---
 
-## Jenis Environment
+## Types of Environments
 
-### 1. Dynamic Pricing Environment (Sederhana)
+### 1. Simple Dynamic Pricing Environment
 
-**Karakteristik:**
-- Setiap arm memiliki peluang beli **konstan**
-- Lingkungan **statis** (tidak berubah)
-- Tidak ada sensitivitas harga
-- Reward = harga
-- Tidak ada noise pasar
+**Characteristics:**
 
-Environment ini cocok untuk memahami konsep dasar **eksplorasi vs eksploitasi**.
+* Each arm has a **constant purchase probability**
+* The environment is **stationary**
+* No price sensitivity
+* Reward = price
+* No market noise
+
+This environment is suitable for understanding the basic concept of the **exploration-exploitation trade-off**.
 
 ---
 
 ### 2. Realistic Dynamic Pricing Environment
 
-**Karakteristik:**
-- Probabilitas beli **dinamis**
-- Ditentukan oleh selisih harga dan *willingness to pay*
-- Menggunakan fungsi sigmoid
-- Lingkungan **non-stationary** (musiman / tren)
-- Ada sensitivitas harga
-- Reward = profit (harga − biaya)
-- Ada noise pasar
+**Characteristics:**
 
-Environment ini lebih mendekati **kondisi pasar nyata** dan menuntut agent untuk terus beradaptasi.
+* Purchase probabilities are **dynamic**
+* Determined by the difference between price and **willingness to pay**
+* Uses a sigmoid function
+* The environment is **non-stationary** due to seasonal effects and trends
+* Includes price sensitivity
+* Reward = profit (price − cost)
+* Includes market noise
 
----
-
-## Kerangka Agent
-
-Semua agent mewarisi antarmuka yang sama:
-- `select_arm()` → memilih harga
-- `update(arm, reward)` → belajar dari hasil
-
-Dengan desain ini, setiap agent:
-- Menghadapi environment yang sama
-- Dibandingkan secara adil
-- Berbeda hanya pada strategi belajarnya
+This environment more closely represents **real-world market conditions** and requires the agent to continuously adapt.
 
 ---
 
-## Agent yang Digunakan
+## Agent Framework
+
+All agents inherit the same interface:
+
+* `select_arm()` → selects a price
+* `update(arm, reward)` → learns from the outcome
+
+This design ensures that each agent:
+
+* Faces the same environment
+* Is evaluated under the same conditions
+* Differs only in its learning strategy
+
+---
+
+## Agents
 
 ### Greedy Agent
-- Tidak melakukan eksplorasi
-- Selalu memilih arm dengan estimasi reward tertinggi
-- Menyimpan:
-  - Jumlah pemilihan tiap arm
-  - Estimasi rata-rata reward
 
-Kuat di environment statis, lemah di environment dinamis.
+* Does not perform exploration
+* Always selects the arm with the highest estimated reward
+* Maintains:
+
+  * The number of times each arm has been selected
+  * The estimated average reward
+
+Performs well in stationary environments but poorly in dynamic environments.
 
 ---
 
 ### ε-Greedy Agent
-- Eksplorasi dengan probabilitas ε
-- Eksploitasi (greedy) dengan probabilitas 1 − ε
-- Lebih robust dibanding Greedy
-- Namun eksplorasinya acak dan tidak efisien
+
+* Explores with probability ε
+* Exploits with probability 1 − ε
+* More robust than the Greedy approach
+* However, its exploration is random and not always efficient
 
 ---
 
 ### UCB (Upper Confidence Bound)
-- Berdasarkan prinsip *Optimism Under Uncertainty*
-- Arm yang jarang dicoba dianggap berpotensi baik
-- Menambahkan bonus eksplorasi:
-  - Arm jarang dicoba → bonus besar
-  - Arm sering dicoba → bonus kecil
-- Menjamin semua arm dicoba minimal satu kali
 
-UCB tidak memilih arm terbaik saat ini, tetapi arm yang **mungkin terbaik**.
+* Based on the principle of **Optimism Under Uncertainty**
+* Arms that have been selected less frequently are considered potentially promising
+* Adds an exploration bonus:
+
+  * Rarely selected arm → larger bonus
+  * Frequently selected arm → smaller bonus
+* Ensures that every arm is explored at least once
+
+UCB does not necessarily select the arm that is currently estimated to be the best, but rather the arm that **could potentially be the best**.
 
 ---
 
 ### Gradient Bandit (Policy-Based)
-- Tidak belajar value, tetapi **policy**
-- Mengukur apakah reward saat ini:
-  - Lebih baik dari rata-rata
-  - Atau lebih buruk dari rata-rata
-- Preferensi arm diperbarui berdasarkan perbandingan tersebut
-- Softmax digunakan untuk mengubah preferensi menjadi probabilitas
 
-Agent ini belajar membentuk kebijakan secara langsung, mirip proses pengambilan keputusan manusia.
+* Learns a **policy** rather than directly estimating action values
+* Evaluates whether the current reward is:
 
----
+  * Better than the average reward
+  * Or worse than the average reward
+* Updates the preference for each arm based on this comparison
+* Uses **softmax** to convert preferences into selection probabilities
 
-## Simulasi
-
-Setiap langkah simulasi:
-1. Agent memilih arm (`select_arm`)
-2. Environment memberikan reward (`pull`)
-3. Agent memperbarui strategi (`update`)
-4. Data dicatat
-
-### Data yang direkam
-- `rewards` → reward tiap langkah
-- `actions` → arm yang dipilih
-- `cumulative_rewards` → total reward kumulatif
-
-Cumulative reward digunakan sebagai metrik utama performa agent.
+The agent learns to directly shape its decision-making policy.
 
 ---
 
-## Hasil Eksperimen
+## Simulation
 
-### Dynamic Pricing Environment (Statis)
+At each simulation step:
 
-**Urutan performa:**
-Greedy ≈ UCB > Gradient Bandit > Epsilon-Greedy
+1. The agent selects an arm (`select_arm`)
+2. The environment provides a reward (`pull`)
+3. The agent updates its strategy (`update`)
+4. The resulting data is recorded
 
-**Pembahasan:**
-- Greedy kebetulan menemukan arm terbaik di awal dan terus mengeksploitasinya
-- UCB, setelah ketidakpastian menurun, juga mengunci arm terbaik
-- Gradient Bandit tetap eksploratif sehingga tertinggal di awal
-- Epsilon-Greedy sengaja melakukan eksplorasi meski sudah tahu arm terbaik
+### Recorded Data
+
+* `rewards` → reward obtained at each step
+* `actions` → arm selected at each step
+* `cumulative_rewards` → cumulative reward over time
+
+Cumulative reward is used as the primary metric for evaluating agent performance.
+
+---
+
+## Experimental Results
+
+### Dynamic Pricing Environment (Stationary)
+
+**Performance ranking:**
+
+Greedy ≈ UCB > Gradient Bandit > ε-Greedy
+
+**Discussion:**
+
+* The Greedy agent happens to identify the best arm early and continuously exploits it.
+* UCB eventually converges toward the best arm as uncertainty decreases.
+* Gradient Bandit remains relatively exploratory, resulting in lower performance during the early stages.
+* ε-Greedy intentionally continues exploring even after identifying the best arm.
 
 ---
 
 ### Realistic Dynamic Pricing Environment (Non-Stationary)
 
-**Urutan performa:**
-Gradient Bandit > Epsilon-Greedy > UCB > Greedy
+**Performance ranking:**
 
-**Pembahasan:**
-- Gradient Bandit mampu menyesuaikan distribusi harga mengikuti perubahan pasar
-- Epsilon-Greedy tetap adaptif, namun eksplorasinya acak
-- UCB lambat beradaptasi karena asumsi stasioner
-- Greedy gagal total karena tidak pernah eksplorasi
+Gradient Bandit > ε-Greedy > UCB > Greedy
 
----
+**Discussion:**
 
-## Insight Utama
-
-> **Algoritma terbaik sangat bergantung pada sifat environment**
-
-- Environment statis → eksploitasi agresif unggul
-- Environment dinamis → eksplorasi adaptif lebih penting
-- Policy-based methods unggul pada dynamic pricing nyata
+* Gradient Bandit can adapt its price-selection distribution as market conditions change.
+* ε-Greedy remains adaptive, although its exploration is random.
+* UCB adapts more slowly because it assumes a stationary environment.
+* Greedy performs poorly because it does not explore alternative prices.
 
 ---
 
-## Pengembangan Lanjutan
+## Key Insights
 
-- Contextual Bandits (waktu, segmen pelanggan)
-- Regret analysis
-- Sliding-window UCB
-- Thompson Sampling
-- Full Reinforcement Learning (state-based pricing)
+> **The effectiveness of an algorithm strongly depends on the characteristics of the environment.**
 
+* Stationary environment → aggressive exploitation tends to perform well
+* Dynamic environment → adaptive exploration becomes more important
+* Policy-based methods can perform well in realistic dynamic pricing environments
+
+---
+
+## Future Development
+
+* Contextual Bandits (time, customer segments)
+* Regret analysis
+* Sliding-Window UCB
+* Thompson Sampling
+* Full Reinforcement Learning (state-based pricing)
